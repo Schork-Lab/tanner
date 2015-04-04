@@ -5,14 +5,8 @@
 
 path.to.Rdata = "~/tscc_projects/tanner/data/family3/metabolome/metabolome.data_032715.RData"
 load(path.to.Rdata)
-GetAllSamples <- function() {
-  samples = NULL
-  for (i in 1:length(plasma)) {
-    run.samples = names(plasma[[i]])[grepl("X001", names(plasma[[i]]))]
-    print(run.samples)
-    samples = union(samples, run.samples)
-  }
-  samples
+GetAllSamples <- function(runs = 1:length(plasma)) {
+  Reduce(union, lapply(plasma[runs], function(x) names(x)[grepl("X001", names(x))]))
 }
 
 samples = GetAllSamples()
@@ -21,51 +15,60 @@ sample1 = 'X001_002_Metabolites_Plasma_JCVI.00001_04.16.14'
 sample2 = 'X001_002_Metabolites_Plasma_JCVI.00002_04.16.14'
 samples = c(sample1, sample2)
 
+# TODO:
+# Create sample specific DFs for each run; would be useful later anyways
+# Create correlation based on sample DFs
+# Find how many metabolites pass based on correlation test vs coefficient of variation
+# Use different samples as the scale
+# Create beautiful plots
 
-FindSampleRuns <- function(samples) {
-  # For each sample, create a list of runs that the sample is a part of
-  relevant.runs = NULL
-  for (i in 1:length(plasma)) {
-    m = match(samples, colnames(plasma[[i]]))
-    if (sum(!is.na(m)) == length(samples)){
-      relevant.runs = c(relevant.runs, i)
-    }
-   }
-  relevant.runs
+
+CreateSampleRunsDf <- function(samples) {
+  # Currently creates a sample/run df for the plasma samples; can be 
+  # modified to be more generalized.
+  # Creates a dataframe:
+  #  cols: samples
+  #  rows: run id
+  #  values: column in the run df to which the sample belongs, NA if not in run
+  sample.runs.df = data.frame(lapply(plasma, 
+                                     function (x) match(samples, colnames(x))
+                                     )
+                              )
+  colnames(sample.runs.df) = 1:length(plasma)
+  rownames(sample.runs.df) = samples
+  sample.runs.df
 }
 
-FindOverlappingMetabolites <- function(runs) {
+FindOverlappingMetabolites <- function(runs = 1:length(plasma)) {
   # Finds a set of metabolites that are found in each of the runs
-  overlapping.metabolites = rownames(plasma[[runs[1]]])
-  for (i in 2:length(runs)){
-    overlapping.metabolites = intersect(overlapping.metabolites, 
-                                        rownames(plasma[[runs[i]]]))
-  }
-  overlapping.metabolites
+  # for the plasma samples
+  Reduce(intersect, lapply(plasma[runs], function(x) rownames(x)))
 }
 
 
-CreateSampleDfs <- function(samples, runs, overlapping.metabolites) {
-  # Create sample specific dataframes
+CreateSampleDfs <- function(sample.runs.df, metabolites) {
+  # Creates a sample specific dataframe based on the values in sample.runs.df
+  
+  num.samples = dim(sample.runs.df)[0]
+  num.runs = dim(sample.runs.df)[1]
   sample.dfs = NULL
-  for(i in 1:length(samples)) {
-    sample.df = data.frame(plasma[[runs[1]]][overlapping.metabolites, samples[i]])
-    colnames(sample.df) = c(paste("Run", runs[1]))
-    for (j in 2:length(runs)){
-      run.df = data.frame(plasma[[runs[j]]][overlapping.metabolites, samples[i]])
-      colnames(run.df) = c(paste("Run", runs[j]))
-      sample.df= cbind(sample.df, run.df)
+  # Create sample specific dataframes
+  for (i in 1:num.samples) {
+    sample.df = NULL
+    for (j in 1:num.runs) {
+      if (!is.na(sample.runs.df[i, j]) {
+        run.df = plasma[[j]][metabolites, sample.runs.df[i, j]]
+        sample.df = cbind(sample.df, run.df)
+      }
     }
-    rownames(sample.df) = overlapping.metabolites
-    sample.dfs[length(sample.dfs)+1] = list(sample.df)
+    sample.dfs[length(scaled.samples) + 1] = list(sample.df)
   }
-  names(sample.dfs) = samples
-  sample.dfs
+  names(sample.dfs) = rownames(sample.runs.df)
 }
 
 relevant.runs = FindSampleRuns(samples)
 overlapping.metabolites = FindOverlappingMetabolites(relevant.runs)
-sample.dfs = CreateSampleDfs(samples, relevant.runs, overlapping.metabolites)
+sample.dfs = CreateSampleDfs(samples, overlapping.metabolites, relevant.runs)
 
 
 # Find the correlation for each metabolite between sample 1 and 2
