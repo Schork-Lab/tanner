@@ -2,8 +2,17 @@
 #Date: March 31s, 2015
 #This script does basic QC for the metabolome data. 
 
+# Libraries
+library(xlsx)
+
+# Paths
+local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
+date = "04042015"
+analysis.path = file.path(local.path, "analysis", date)
+path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
+
+
 # Loading in Data
-path.to.Rdata = "~/tscc_projects/tanner/data/family3/metabolome/metabolome.data_032715.RData"
 load(path.to.Rdata)
 
 # Functions
@@ -50,6 +59,23 @@ CreateSampleDfs <- function(sample.runs.df, metabolites) {
   sample.dfs
 }
 
+save.xlsx <- function (file, ...)
+{
+  # Copied from http://www.r-bloggers.com/quickly-export-multiple-r-objects-to-an-excel-workbook/
+  require(xlsx, quietly = TRUE)
+  objects <- list(...)
+  fargs <- as.list(match.call(expand.dots = TRUE))
+  objnames <- as.character(fargs)[-c(1, 2)]
+  nobjects <- length(objects)
+  for (i in 1:nobjects) {
+    if (i == 1)
+      write.xlsx(objects[[i]], file, sheetName = objnames[i])
+    else write.xlsx(objects[[i]], file, sheetName = objnames[i],
+                    append = TRUE)
+  }
+  print(paste("Workbook", file, "has", nobjects, "worksheets."))
+}
+
 # Analysis
 
 
@@ -59,16 +85,23 @@ CreateSampleDfs <- function(sample.runs.df, metabolites) {
 # Use different samples as the scale
 # Create beautiful plots
 
+
+#sample1 = 'X001_002_Metabolites_Plasma_JCVI.00001_04.16.14'
+#sample2 = 'X001_002_Metabolites_Plasma_JCVI.00002_04.16.14'
+#samples = c(sample1, sample2)
+
+# Create Sample Specific Dfs
 samples = GetAllSamples()
-
-sample1 = 'X001_002_Metabolites_Plasma_JCVI.00001_04.16.14'
-sample2 = 'X001_002_Metabolites_Plasma_JCVI.00002_04.16.14'
-samples = c(sample1, sample2)
-
 sample.runs.df = CreateSampleRunsDf(samples)
 overlapping.metabolites = FindOverlappingMetabolites()
 sample.dfs = CreateSampleDfs(sample.runs.df, overlapping.metabolites)
 
+# Find general statistics about runs and individuals
+individuals = sapply(rownames(sample.runs.df), function(x) substr(x, 6, 8))
+run.info = !is.na(sample.runs.df[names(individuals[order(individuals)]),])
+general.fn = file.path(analysis.path, "general.xlsx")
+individual.info = table(individuals)
+save.xlsx(general.fn, run.info, individual.info)
 
 # Find the correlation for each metabolite between sample 1 and 2
 correlations = diag(cor(t(as.matrix(sample.dfs[[1]])), t(as.matrix(sample.dfs[[2]]))))
