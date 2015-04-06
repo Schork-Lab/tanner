@@ -10,6 +10,8 @@ local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
 date = "04042015"
 analysis.path = file.path(local.path, "analysis", date)
 tn.path = file.path(analysis.path, "technical_noise")
+corr.path = file.path(tn.path, "correlation")
+cv.path = file.path(tn.path, "cv")
 path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
 rownames(metab.info) = metab.info[,'CHEMICAL.ID']
 
@@ -130,7 +132,7 @@ rownames(sample1.values) = metab.info[rownames(sample1.values),]$BIOCHEMICAL
 rownames(sample2.values) = rownames(sample1.values)
 for (i in 1:length(sample1.values)){
   metabolite = rownames(sample1.values)[i]
-  fn = file.path(tn.path, sprintf("%s_%s_v_%s", metabolite, sample1, sample2))
+  fn = file.path(corr.path, sprintf("%s---%s---v---%s.png", metabolite, sample1, sample2))
   png(fn)
   title = sprintf("%s for JCVI.00001 vs JCVI.00002 \n Corr: %0.2f", metabolite, correlations[metabolite])
   plot(as.numeric(sample1.values[metabolite,]), as.numeric(sample2.values[metabolite,]),
@@ -162,3 +164,18 @@ fold.change.metabolites = which(apply(as.matrix(scaled.dfs[[sample2]]), 1,
 # least one run
 low.confidence.metabolites = intersect(names(high.cv.metabolites), names(fold.change.metabolites))
 
+# Using for loop to create figures again
+for (i in 1:length(low.confidence.metabolites)) {
+  metabolite.id = low.confidence.metabolites[i]
+  metabolite = metab.info[metabolite.id,'BIOCHEMICAL']
+  fn = file.path(cv.path, sprintf("%s---%s---scaledby---%s.png", metabolite, sample1, sample2))
+  png(fn)
+  par(mfrow=c(1,2))
+  title = sprintf("Scaled JCVI.00002 \n %s \n CV: %0.1f", metabolite, cv.dfs[[sample2]][metabolite.id])
+  plot(overlapping.runs, as.numeric(scaled.dfs[[sample2]][metabolite.id, ]),
+       main=title, xlab="Run Id", ylab="Scaled against JCVI.00001")
+  plot(as.numeric(sample.dfs[[sample1]][metabolite.id, overlapping.runs]),
+       as.numeric(sample.dfs[[sample2]][metabolite.id, overlapping.runs]),
+       xlab="Raw JCVI.00001", ylab="Raw JCVI.00002", main=metabolite)
+  dev.off()
+}
