@@ -13,11 +13,12 @@ tn.path = file.path(analysis.path, "technical_noise")
 corr.path = file.path(tn.path, "correlation")
 cv.path = file.path(tn.path, "cv")
 path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
-rownames(metab.info) = metab.info[,'CHEMICAL.ID']
+
 
 
 # Loading in Data
 load(path.to.Rdata)
+rownames(metab.info) = metab.info[,'CHEMICAL.ID']
 
 # Functions
 GetAllSamples <- function(runs = 1:length(plasma)) {
@@ -49,13 +50,11 @@ CreateSampleDfs <- function(sample.runs.df, metabolites) {
   # Creates a list of sample specific dataframes based on the values in sample.runs.df
   
   ProcessSample <- function(sample) {
-    sample.runs = sample.runs.df[sample, ]
-    sample.runs = sample.runs[which(!is.na(sample.runs))]
-    sample.run.idx = as.numeric(colnames(sample.runs))
-    sample.df = data.frame(lapply(sample.run.idx, function(x) plasma[[x]][metabolites,
+    sample.runs = which(!is.na(sample.runs.df[sample, ]))
+    sample.df = data.frame(lapply(sample.runs, function(x) plasma[[x]][metabolites,
                                                                           sample]))
     rownames(sample.df) = metabolites
-    colnames(sample.df) = sample.run.idx
+    colnames(sample.df) = sample.runs
     sample.df
   }
   sample.dfs = lapply(rownames(sample.runs.df), ProcessSample)
@@ -128,7 +127,7 @@ sample1.values = sample1.df[overlapping.metabolites[which(correlations < 0.5)],
                                        overlapping.runs]
 sample2.values = sample2.df[overlapping.metabolites[which(correlations < 0.5)],
                                        overlapping.runs]
-rownames(sample1.values) = metab.info[rownames(sample1.values),]$BIOCHEMICAL
+rownames(sample1.values) = metab.info[rownames(sample1.values),'BIOCHEMICAL']
 rownames(sample2.values) = rownames(sample1.values)
 for (i in 1:length(sample1.values)){
   metabolite = rownames(sample1.values)[i]
@@ -165,13 +164,15 @@ fold.change.metabolites = which(apply(as.matrix(scaled.dfs[[sample2]]), 1,
 low.confidence.metabolites = intersect(names(high.cv.metabolites), names(fold.change.metabolites))
 
 # Using for loop to create figures again
+correlations = FindCorrelation(sample.dfs[[sample1]], sample.dfs[[sample2]])
 for (i in 1:length(low.confidence.metabolites)) {
   metabolite.id = low.confidence.metabolites[i]
   metabolite = metab.info[metabolite.id,'BIOCHEMICAL']
   fn = file.path(cv.path, sprintf("%s---%s---scaledby---%s.png", metabolite, sample1, sample2))
   png(fn)
   par(mfrow=c(1,2))
-  title = sprintf("Scaled JCVI.00002 \n %s \n CV: %0.1f", metabolite, cv.dfs[[sample2]][metabolite.id])
+  title = sprintf("Scaled JCVI.00002 \n %s \n CV: %0.1f, Corr: %0.2f",
+                  metabolite, cv.dfs[[sample2]][metabolite.id], correlations[metabolite.id])
   plot(overlapping.runs, as.numeric(scaled.dfs[[sample2]][metabolite.id, ]),
        main=title, xlab="Run Id", ylab="Scaled against JCVI.00001")
   plot(as.numeric(sample.dfs[[sample1]][metabolite.id, overlapping.runs]),
@@ -179,3 +180,7 @@ for (i in 1:length(low.confidence.metabolites)) {
        xlab="Raw JCVI.00001", ylab="Raw JCVI.00002", main=metabolite)
   dev.off()
 }
+
+
+correlation.low.confidence = rownames(sample1.values)
+low.confidence.metabolites = metab.info[low.confidence.metabolites,'BIOCHEMICAL']
