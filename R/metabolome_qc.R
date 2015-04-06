@@ -138,9 +138,27 @@ for (i in 1:length(sample1.values)){
   dev.off()
 }
 
-# Calculate Coefficient of Variation based on Scaled for TP2
-
 # Create new scaled values based on sample 1 only.
+ScaleDfs <- function(sample.df, scale.by.df) {
+  overlapping.runs = intersect(colnames(sample.df),
+                               colnames(scale.by.df))
+  sample.df = sample.df[,overlapping.runs]/scale.by.df[,overlapping.runs]
+  sample.df
+}
+scaled.dfs = sapply(sample.dfs, FUN=ScaleDfs, scale.by.df=sample.dfs[[sample1]])
 
-# Coefficient of Variation: sd/mean
+# Calculate coefficient of Variation: sd/mean
+cv.dfs = lapply(scaled.dfs, function(x) {apply(as.matrix(x), 1, 
+                                               function(y) {sd(y)/mean(y)})})
+
+# Find metabolites with high c.v. for TP2
+high.cv.metabolites = which(cv.dfs[[sample2]] > 0.5)
+
+# Find metabolites with over a fold change between TP1 and TP2 and high c.v.
+fold.change.metabolites = which(apply(as.matrix(scaled.dfs[[sample2]]), 1,
+                                      function (x) {max(x) > 2}))
+
+# Low confidence metabolites are defined as those which have a high c.v. and a high fold change in at
+# least one run
+low.confidence.metabolites = intersect(names(high.cv.metabolites), names(fold.change.metabolites))
 
