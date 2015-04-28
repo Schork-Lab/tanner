@@ -10,6 +10,14 @@ code.path = "/home/kunal/tscc_projects/tanner/code/tanner_project/R/"
 setwd(code.path)
 source("load.R")
 
+# Output paths
+today <- Sys.Date()
+date = format(today, format="%m%d%Y")
+analysis.path = file.path(local.path, "analysis", date)
+tn.path = file.path(analysis.path, "technical_noise")
+corr.path = file.path(tn.path, "correlation")
+cv.path = file.path(tn.path, "cv")
+
 # Find general statistics about runs and individuals
 individuals = sapply(rownames(sample.runs.df), function(x) substr(x, 6, 8))
 run.info = !is.na(sample.runs.df[names(individuals[order(individuals)]),])

@@ -8,7 +8,8 @@ library(xlsx)
 # Paths
 local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
 output.bool = TRUE
-date = "04042015"
+today <- Sys.Date()
+date = format(today, format="%m%d%Y")
 analysis.path = file.path(local.path, "analysis", date)
 tn.path = file.path(analysis.path, "technical_noise")
 corr.path = file.path(tn.path, "correlation")
