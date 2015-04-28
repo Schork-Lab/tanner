@@ -5,85 +5,10 @@
 # Libraries
 library(xlsx)
 
-# Paths
-local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
-date = "04042015"
-analysis.path = file.path(local.path, "analysis", date)
-tn.path = file.path(analysis.path, "technical_noise")
-corr.path = file.path(tn.path, "correlation")
-cv.path = file.path(tn.path, "cv")
-path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
-
-
-
-# Loading in Data
-load(path.to.Rdata)
-rownames(metab.info) = metab.info[,'CHEMICAL.ID']
-
-# Functions
-GetAllSamples <- function(runs = 1:length(plasma)) {
-  Reduce(union, lapply(plasma[runs], function(x) names(x)[grepl("X001", names(x))]))
-}
-
-
-CreateSampleRunsDf <- function(samples) {
-  # Currently creates a sample/run df for the plasma samples; can be 
-  # modified to be more generalized.
-  # Creates a dataframe:
-  #  cols: samples
-  #  rows: run id
-  #  values: column in the run df to which the sample belongs, NA if not in run
-  sample.runs.df = data.frame(lapply(plasma, function (x) match(samples, colnames(x))))
-  colnames(sample.runs.df) = 1:length(plasma)
-  rownames(sample.runs.df) = samples
-  sample.runs.df
-}
-
-
-FindOverlappingMetabolites <- function(runs = 1:length(plasma)) {
-  # Finds a set of metabolites that are found in each of the runs
-  # for the plasma samples
-  Reduce(intersect, lapply(plasma[runs], function(x) rownames(x)))
-}
-
-CreateSampleDfs <- function(sample.runs.df, metabolites) {
-  # Creates a list of sample specific dataframes based on the values in sample.runs.df
-  
-  ProcessSample <- function(sample) {
-    sample.runs = which(!is.na(sample.runs.df[sample, ]))
-    sample.df = data.frame(lapply(sample.runs, function(x) plasma[[x]][metabolites,
-                                                                          sample]))
-    rownames(sample.df) = metabolites
-    colnames(sample.df) = sample.runs
-    sample.df
-  }
-  sample.dfs = lapply(rownames(sample.runs.df), ProcessSample)
-  names(sample.dfs) = rownames(sample.runs.df)
-  sample.dfs
-}
-
-CreateMetaboliteDfs <- function(sample.runs.df, metabolites) {
-  # TODO: Create Metabolite Dfs, makes it easier for later analysis for specific metabolites
-}
-
-# Analysis
-
-
-# TODO:
-# Find how many metabolites pass based on correlation test vs coefficient of variation
-# Use different samples as the scale
-# Create beautiful plots
-
-
-#sample1 = 'X001_002_Metabolites_Plasma_JCVI.00001_04.16.14'
-#sample2 = 'X001_002_Metabolites_Plasma_JCVI.00002_04.16.14'
-#samples = c(sample1, sample2)
-
-# Create Sample Specific Dfs
-samples = GetAllSamples()
-sample.runs.df = CreateSampleRunsDf(samples)
-overlapping.metabolites = FindOverlappingMetabolites()
-sample.dfs = CreateSampleDfs(sample.runs.df, overlapping.metabolites)
+# Load data
+code.path = "/home/kunal/tscc_projects/tanner/code/tanner_project/R/"
+setwd(code.path)
+source("load.R")
 
 # Find general statistics about runs and individuals
 individuals = sapply(rownames(sample.runs.df), function(x) substr(x, 6, 8))
@@ -182,5 +107,12 @@ for (i in 1:length(low.confidence.metabolites)) {
 }
 
 
-correlation.low.confidence = rownames(sample1.values)
-low.confidence.metabolites = metab.info[low.confidence.metabolites,'BIOCHEMICAL']
+# Output Correlation and CVs to Excel Sheets
+sample2.corr = FindCorrelation(sample.dfs[[sample1]], sample.dfs[[sample2]])
+sample2.cvs = cv.dfs[[sample2]]
+sample2.out = data.frame(Correlation=sample2.corr, CV=sample2.cvs)
+rownames(sample2.out) = metab.info[rownames(sample2.out), 'BIOCHEMICAL']
+corr.fn = file.path(analysis.path, "correlation.and.cv.xlsx")
+write.xlsx(sample2.out, corr.fn, sheetName = "Correlation and C.V. for Sample 1 v Sample2")
+
+
