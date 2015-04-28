@@ -84,25 +84,28 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { x[which(!is.na(x))] }))
   run.ids.order = colnames(sample.runs.df)[sample.order]
   
-  
-  run.cols = sapply(colnames(sample.runs.df),
-                    function (x) {
-                      run = rep(0, num.total)
-                      run[which(run.ids.order == x)] = 1
-                      as.factor(run)
-                    })
-  colnames(run.cols) = sapply(colnames(sample.runs.df), function (x) {paste("Run",x, sep="X")})
-  
-  sample.cols = sapply(rownames(sample.runs.df),
-                         function (x) {
-                           sample = rep(0, num.total)
-                           sample[grepl(x, sample.ids.order)] = 1
-                           as.factor(sample)
-                         })
+#   run.cols = sapply(colnames(sample.runs.df),
+#                     function (x) {
+#                       run = rep(0, num.total)
+#                       run[which(run.ids.order == x)] = 1
+#                       as.factor(run)
+#                     })
+#   colnames(run.cols) = sapply(colnames(sample.runs.df), function (x) {paste("Run", x, sep="X")})
+#   
+#   sample.cols = sapply(rownames(sample.runs.df),
+#                          function (x) {
+#                            sample = rep(0, num.total)
+#                            sample[grepl(x, sample.ids.order)] = 1
+#                            as.factor(sample)
+#                          })
 
   
+  sample.cols = as.factor(sample.ids.order)
+  run.cols = as.factor(run.ids.order)
+
   ProcessMetabolite = function(metabolite) {
-    values = sapply(1:num.total, function(i) { sample.dfs[[sample.order[i]]][metabolite, run.ids.order[i]]})
+    values = sapply(1:num.total,
+                    function(i) { sample.dfs[[sample.ids.order[i]]][metabolite, run.ids.order[i]]})
     values
   }
   
@@ -110,7 +113,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   colnames(metabolite.cols) = metabolites
   
   combined.df = as.data.frame(cbind(run.cols, sample.cols, metabolite.cols))
-  
+  colnames(combined.df) = unlist(lapply(colnames(metabolite.df), function(x) {paste("X", x, sep="")}))
   combined.df
   
 }
