@@ -1,0 +1,5 @@
+fc_date: experiment_date
+fc_name: experiment_name
+upload:
+  dir: output_dir
+details:

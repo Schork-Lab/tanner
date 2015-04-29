@@ -1,0 +1,12 @@
+  - files: [file1]
+    description: sample_name
+    genome_build: GRCh37
+    analysis: RNA-seq
+    algorithm:
+         variantcaller: gatk
+         aligner: tophat2
+         rsem: True
+         quality_format: Standard
+         trim_reads: read_through
+         adapters: [truseq, polya]
+         strandedness: unstranded
