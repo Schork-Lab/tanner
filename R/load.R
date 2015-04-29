@@ -2,21 +2,13 @@
 #Date: March 31st, 2015
 #This script does basic QC for the metabolome data. 
 
+
 # Libraries
 library(xlsx)
 
 # Paths
 local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
-output.bool = TRUE
-today <- Sys.Date()
-date = format(today, format="%m%d%Y")
-analysis.path = file.path(local.path, "analysis", date)
-tn.path = file.path(analysis.path, "technical_noise")
-corr.path = file.path(tn.path, "correlation")
-cv.path = file.path(tn.path, "cv")
 path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
-
-
 
 
 # Loading in Data
