@@ -70,7 +70,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   
   # Get number of samples and number of runs from sample.runs.df
   num.samples = dim(sample.runs.df)[0]
-  num.runs =dim(sample.runs.df)[1]
+  num.runs = dim(sample.runs.df)[1]
   num.total = sum(!is.na(as.vector(t(sample.runs.df))))
   
   # Since the metabolite df is melted down to 2-d, the ordering is determined by looking
@@ -80,7 +80,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
                                    ))
   
   run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { x[which(!is.na(x))] }))
-  run.ids.order = colnames(sample.runs.df)[sample.order]
+  run.ids.order = as.vector(run.ids.order)
   
   # Create column factors for samples and columns for mixed modeling and other applications.
   sample.cols = as.factor(sample.ids.order)
@@ -116,7 +116,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
 
   # Combine all the information into a single 
   combined.df = as.data.frame(cbind(run.cols, sample.cols, metabolite.cols))
-  colnames(combined.df) = unlist(lapply(colnames(metabolite.df), function(x) {paste("X", x, sep="")}))
+  colnames(combined.df) = unlist(lapply(colnames(combined.df), function(x) {paste("X", x, sep="")}))
   combined.df
   
 }
