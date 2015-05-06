@@ -20,6 +20,6 @@ run.6.metabolite.df = CreateMetaboliteDfs(run.6.sample.runs.df, run.6.sample.dfs
 rownames(run.6.metabolite.df) = run.6.metabolite.df$Xsample.cols
 run.6.metabolite.df = run.6.metabolite.df[,3:dim(run.6.metabolite.df)[2]]
 
-# Scale across samples by subtracting out mean
-scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(x, scale=FALSE)}))
+# Scale across samples by log-transforming data and then subtracting out mean
+scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
 colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
