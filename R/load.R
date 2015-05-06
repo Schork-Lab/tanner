@@ -79,7 +79,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
                                    function (x) { rep(x, length(which(!is.na(sample.runs.df[x,]))))}
                                    ))
   
-  run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { x[which(!is.na(x))] }))
+  run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { which(!is.na(x)) }))
   run.ids.order = as.vector(run.ids.order)
   
   # Create column factors for samples and columns for mixed modeling and other applications.
