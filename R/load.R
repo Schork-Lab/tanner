@@ -1,14 +1,18 @@
 #Author: Kunal Bhutani
 #Date: March 31st, 2015
-#This script does basic QC for the metabolome data. 
-
+#Last Updated: May 5th, 2015
+# Does the initial loading of all metabolomics data.
 
 # Libraries
 library(xlsx)
+library(yaml)
 
-# Paths
-local.path = "/home/kunal/tscc_projects/tanner/data/family3/metabolome"
-path.to.Rdata = file.path(local.path, "metabolome.data_032715.RData")
+# Configuring Paths
+config = yaml.load_file('../config.yaml')
+file.dir = dirname(parent.frame(2)$ofile)
+setwd(file.dir)
+path.to.Rdata = "data/family3/metabolome/metabolome.data_032715.RData"
+path.to.Rdata = file.path(config$paths$local, path.to.Rdata)
 
 
 # Loading in Data
@@ -58,18 +62,19 @@ CreateSampleDfs <- function(sample.runs.df, metabolites) {
 
 CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
                                 metabolites) {
-  # TODO: Create Metabolite Dfs, makes it easier for later analysis for specific metabolites
   # Rows: Each different sample
   # Sample order is determined by going across the sample.runs.df one row at a time
   # Columns: Metabolites
   # Special Columns: Identities/Factors for Run #
   # Special Columns: Identities/Factors for Sample
   
+  # Get number of samples and number of runs from sample.runs.df
   num.samples = dim(sample.runs.df)[0]
   num.runs =dim(sample.runs.df)[1]
   num.total = sum(!is.na(as.vector(t(sample.runs.df))))
   
-  row.index = 0
+  # Since the metabolite df is melted down to 2-d, the ordering is determined by looking
+  # across runs for each sample. Then down each row.
   sample.ids.order = unlist(lapply(rownames(sample.runs.df), 
                                    function (x) { rep(x, length(which(!is.na(sample.runs.df[x,]))))}
                                    ))
@@ -77,6 +82,14 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { x[which(!is.na(x))] }))
   run.ids.order = colnames(sample.runs.df)[sample.order]
   
+  # Create column factors for samples and columns for mixed modeling and other applications.
+  sample.cols = as.factor(sample.ids.order)
+  run.cols = as.factor(run.ids.order)
+
+  
+# The commented out is a different method of creating above but it also creates a different
+# sample and run column for each sample and run instead of a single factor. This might be useful in other
+# aplications.
 #   run.cols = sapply(colnames(sample.runs.df),
 #                     function (x) {
 #                       run = rep(0, num.total)
@@ -92,27 +105,23 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
 #                            as.factor(sample)
 #                          })
 
-  
-  sample.cols = as.factor(sample.ids.order)
-  run.cols = as.factor(run.ids.order)
-
+  # Create a column for each metabolite based on the previously determined order for rows
   ProcessMetabolite = function(metabolite) {
     values = sapply(1:num.total,
                     function(i) { sample.dfs[[sample.ids.order[i]]][metabolite, run.ids.order[i]]})
     values
   }
-  
   metabolite.cols = as.data.frame(sapply(metabolites, ProcessMetabolite))
   colnames(metabolite.cols) = metabolites
-  
+
+  # Combine all the information into a single 
   combined.df = as.data.frame(cbind(run.cols, sample.cols, metabolite.cols))
   colnames(combined.df) = unlist(lapply(colnames(metabolite.df), function(x) {paste("X", x, sep="")}))
   combined.df
   
 }
 
-# Loading
-
+# Loading default parameters
 samples = GetAllSamples()
 sample.runs.df = CreateSampleRunsDf(samples)
 overlapping.metabolites = FindOverlappingMetabolites()

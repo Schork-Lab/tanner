@@ -6,17 +6,24 @@
 library(xlsx)
 
 # Load data
-code.path = "/home/kunal/tscc_projects/tanner/code/tanner_project/R/"
-setwd(code.path)
 source("load.R")
+
+# Set paths
+local.path = config$paths$local
+code.path = file.path(local.path, 'code/R/')
+setwd(code.path)
 
 # Output paths
 today <- Sys.Date()
 date = format(today, format="%m%d%Y")
-analysis.path = file.path(local.path, "analysis", date)
+analysis.path = file.path(local.path, "analysis", "metabolomics", date)
+dir.create(analysis.path)
 tn.path = file.path(analysis.path, "technical_noise")
+dir.create(tn.path)
 corr.path = file.path(tn.path, "correlation")
+dir.create(corr.path)
 cv.path = file.path(tn.path, "cv")
+dir.create(cv.path)
 
 # Find general statistics about runs and individuals
 individuals = sapply(rownames(sample.runs.df), function(x) substr(x, 6, 8))
