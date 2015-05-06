@@ -28,7 +28,8 @@ colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
 
 # Method 1: z-score > 2
 metabolite.z.scores = scale(scaled.metabolite.df) # scale across metabolites
-z.score.outliers = which(abs(metabolite.z.scores) > 2, arr.ind=T)[,2]
+lower.z.score.outliers = which(metabolite.z.scores < -2, arr.ind=T)
+higher.z.score.outliers = which(metabolite.z.scores > 2, arr.ind=T)
 
 # Method 2: Extreme values 
 # TODO: Unclear how the different scaling affects these calculations. Ignoring for now.
@@ -40,4 +41,37 @@ extreme.metabolites = sapply(colnames(not.na.metabolites),
                                                            method="I")
                                     outliers
                                   })
+
+# Method 3: Hampel Filter
+# TODO: Error prone, because of the selection of the window
+hampel.metabolites = sapply(colnames(not.na.metabolites),  
+                             function(x) { 
+                               metabolite.levels = not.na.metabolites[!is.na(not.na.metabolites[,x]),x]
+                               outliers = hampel(metabolite.levels, 1, 0)
+                               outliers
+                             })
+
+# Method 4: Median Absolute Deviation
+metabolite.mad = apply(scaled.metabolite.df, 2, mad, na.rm=T)
+metabolite.median = apply(scaled.metabolite.df, 2, median, na.rm=T)
+lower.bound.mad = metabolite.median + (-2*metabolite.mad)
+upper.bound.mad = metabolite.median + (2*metabolite.mad)
+metabolite.lower = apply(scaled.metabolite.df, 2, 
+                         function(x) {
+                           median = median(x, na.rm=T)
+                           mad = mad(x, na.rm=T)
+                           lower.bound.mad = median + (-2*mad)
+                           x < lower.bound.mad
+                         })
+
+metabolite.higher = apply(scaled.metabolite.df, 2, 
+                         function(x) {
+                           median = median(x, na.rm=T)
+                           mad = mad(x, na.rm=T)
+                           upper.bound.mad = median + (2*mad)
+                           x > upper.bound.mad
+                         })
+
+lower.mad.outliers = which(metabolite.lower, arr.ind=T)
+higher.mad.outliers = which(metabolite.higher, arr.ind=T)
 
