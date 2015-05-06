@@ -57,7 +57,6 @@ hist(correlations, main=title, cex=0.5)
 dev.off()
 
 # Create metabolite specific scatter plots for ones that have low correlation
-# TODO: Clean up code, use metabolite specific dfs.
 sample1.df = sample.dfs[[sample1]]
 sample2.df = sample.dfs[[sample2]]
 overlapping.runs = intersect(colnames(sample1.df),
