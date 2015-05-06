@@ -23,3 +23,11 @@ run.6.metabolite.df = run.6.metabolite.df[,3:dim(run.6.metabolite.df)[2]]
 # Scale across samples by log-transforming data and then subtracting out mean
 scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
 colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
+
+# Find outliers
+
+# Method 1: z-score > 2
+metabolite.z.scores = scale(scaled.metabolite.df) # scale across metabolites
+z.score.outliers = which(abs(scale(scaled.metabolite.df)) > 2, arr.ind=T)[,2]
+
+
