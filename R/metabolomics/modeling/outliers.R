@@ -24,10 +24,20 @@ run.6.metabolite.df = run.6.metabolite.df[,3:dim(run.6.metabolite.df)[2]]
 scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
 colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
 
-# Find outliers
+# Univariate Outliers
 
 # Method 1: z-score > 2
 metabolite.z.scores = scale(scaled.metabolite.df) # scale across metabolites
-z.score.outliers = which(abs(scale(scaled.metabolite.df)) > 2, arr.ind=T)[,2]
+z.score.outliers = which(abs(metabolite.z.scores) > 2, arr.ind=T)[,2]
 
+# Method 2: Extreme values 
+# TODO: Unclear how the different scaling affects these calculations. Ignoring for now.
+not.na.metabolites = abs(scaled.metabolite.df[,which(colSums(is.na(scaled.metabolite.df)) < 3)])
+extreme.metabolites = sapply(colnames(not.na.metabolites),  
+                                  function(x) { 
+                                    outliers = getOutliers(not.na.metabolites[!is.na(not.na.metabolites[,x])
+                                                                              ,x],
+                                                           method="I")
+                                    outliers
+                                  })
 
