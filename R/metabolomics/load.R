@@ -8,9 +8,9 @@ library(xlsx)
 library(yaml)
 
 # Configuring Paths
-config = yaml.load_file('../config.yaml')
-file.dir = dirname(parent.frame(2)$ofile)
-setwd(file.dir)
+config = yaml.load_file('config.yaml')
+#file.dir = dirname(parent.frame(2)$ofile)
+#setwd(file.dir)
 path.to.Rdata = "data/family3/metabolome/metabolome.data_032715.RData"
 path.to.Rdata = file.path(config$paths$local, path.to.Rdata)
 
@@ -48,8 +48,8 @@ CreateSampleDfs <- function(sample.runs.df, metabolites) {
   # Creates a list of sample specific dataframes based on the values in sample.runs.df
   
   ProcessSample <- function(sample) {
-    sample.runs = which(!is.na(sample.runs.df[sample, ]))
-    sample.df = data.frame(lapply(sample.runs, function(x) plasma[[x]][metabolites,
+    sample.runs = colnames(sample.runs.df)[which(!is.na(sample.runs.df[sample, ]))]
+    sample.df = data.frame(lapply(sample.runs, function(x) plasma[[as.integer(x)]][metabolites,
                                                                           sample]))
     rownames(sample.df) = metabolites
     colnames(sample.df) = sample.runs
@@ -79,7 +79,8 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
                                    function (x) { rep(x, length(which(!is.na(sample.runs.df[x,]))))}
                                    ))
   
-  run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), function (x) { which(!is.na(x)) }))
+  run.ids.order = unlist(lapply(as.data.frame(t(sample.runs.df)), 
+                                function (x) { colnames(sample.runs.df)[which(!is.na(x))] }))
   run.ids.order = as.vector(run.ids.order)
   
   # Create column factors for samples and columns for mixed modeling and other applications.
@@ -108,7 +109,7 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   # Create a column for each metabolite based on the previously determined order for rows
   ProcessMetabolite = function(metabolite) {
     values = sapply(1:num.total,
-                    function(i) { sample.dfs[[sample.ids.order[i]]][metabolite, run.ids.order[i]]})
+                    function(i) { as.numeric(sample.dfs[[sample.ids.order[i]]][metabolite, run.ids.order[i]])})
     values
   }
   metabolite.cols = as.data.frame(sapply(metabolites, ProcessMetabolite))
