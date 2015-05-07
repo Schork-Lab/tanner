@@ -24,15 +24,16 @@ GetAllSamples <- function(runs = 1:length(plasma)) {
   Reduce(union, lapply(plasma[runs], function(x) names(x)[grepl("X001", names(x))]))
 }
 
-CreateSampleRunsDf <- function(samples) {
+CreateSampleRunsDf <- function(samples, 
+                               runs = 1:length(plasma)) {
   # Currently creates a sample/run df for the plasma samples; can be 
   # modified to be more generalized.
   # Creates a dataframe:
   #  cols: samples
   #  rows: run id
   #  values: column in the run df to which the sample belongs, NA if not in run
-  sample.runs.df = data.frame(lapply(plasma, function (x) match(samples, colnames(x))))
-  colnames(sample.runs.df) = 1:length(plasma)
+  sample.runs.df = data.frame(lapply(plasma[runs], function (x) match(samples, colnames(x))))
+  colnames(sample.runs.df) = runs
   rownames(sample.runs.df) = samples
   sample.runs.df
 }
@@ -122,10 +123,24 @@ CreateMetaboliteDfs <- function(sample.runs.df, sample.dfs,
   
 }
 
+LoadData = function(runs = 1:length(plasma)) {
+  # Loads and parses data based on the Rdata file
+  # Args: runs: list of runs to be loaded 
+  # Returns: data list with items: samples, sample.runs.df, metabolites, sample.dfs, metabolite.df
+  samples = GetAllSamples(runs)
+  sample.runs.df = CreateSampleRunsDf(samples, runs)
+  metabolites = FindOverlappingMetabolites(runs)
+  sample.dfs = CreateSampleDfs(sample.runs.df, metabolites)
+  metabolite.df = CreateMetaboliteDfs(sample.runs.df, sample.dfs, metabolites)
+  data = list("samples"=samples,
+              "sample.runs.df"=sample.runs.df,
+              "metabolites"=metabolites,
+              "sample.dfs"=sample.dfs,
+              "metabolite.df"=metabolite.df)
+  data
+}
+
+
 # Loading default parameters
-samples = GetAllSamples()
-sample.runs.df = CreateSampleRunsDf(samples)
-overlapping.metabolites = FindOverlappingMetabolites()
-sample.dfs = CreateSampleDfs(sample.runs.df, overlapping.metabolites)
-metabolite.df = CreateMetaboliteDfs(sample.runs.df, sample.dfs, overlapping.metabolites)
+data = LoadData()
 
