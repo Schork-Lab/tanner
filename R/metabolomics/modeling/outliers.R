@@ -2,8 +2,12 @@
 #Date: May 6, 2015
 #Purpose: Detect metabolites that are deviating from baseline for an individual
 
+library(pracma)
+library(extremevalues)
+
 # Load data
 source("R/metabolomics/load.R")
+
 
 # Set paths
 local.path = config$paths$local
@@ -21,17 +25,21 @@ rownames(run.6.metabolite.df) = run.6.metabolite.df$Xsample.cols
 run.6.metabolite.df = run.6.metabolite.df[,3:dim(run.6.metabolite.df)[2]]
 
 # Scale across samples by log-transforming data and then subtracting out mean
-scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
-colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
+#scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
+
+# Since these samples are run on the same run, no need to scale the data. A simple log transformation
+# is sufficient.
+scaled.metabolite.df = log(run.6.metabolite.df)
 
 # Univariate Outliers
 
 # Method 1: z-score > 2
 metabolite.z.scores = scale(scaled.metabolite.df) # scale across metabolites
-lower.z.score.outliers = which(metabolite.z.scores < -2, arr.ind=T)
-higher.z.score.outliers = which(metabolite.z.scores > 2, arr.ind=T)
+z.score.outliers = data.frame(lower.z.scores = I(apply(metabolite.z.scores, 2, function (x) {which(x < -2)})),
+                              higher.z.scores = I(apply(metabolite.z.scores, 2, function (x) {which(x > 2)})))
 
 # Method 2: Extreme values 
+# http://www.cbs.nl/NR/rdonlyres/21A8D00F-E20B-43B2-A95D-3D089833EED3/0/201003x10pub.pdf
 # TODO: Unclear how the different scaling affects these calculations. Ignoring for now.
 not.na.metabolites = abs(scaled.metabolite.df[,which(colSums(is.na(scaled.metabolite.df)) < 3)])
 extreme.metabolites = sapply(colnames(not.na.metabolites),  
@@ -41,37 +49,42 @@ extreme.metabolites = sapply(colnames(not.na.metabolites),
                                                            method="I")
                                     outliers
                                   })
+extreme.outliers = as.data.frame(extreme.metabolites)[c('R2','iLeft','iRight'),]
+rownames(extreme.outliers) = c('R2-QQ', 'lower.extreme.values', 'higher.extreme.values')
+extreme.outliers = t(extreme.outliers)
 
-# Method 3: Hampel Filter
-# TODO: Error prone, because of the selection of the window
-hampel.metabolites = sapply(colnames(not.na.metabolites),  
-                             function(x) { 
-                               metabolite.levels = not.na.metabolites[!is.na(not.na.metabolites[,x]),x]
-                               outliers = hampel(metabolite.levels, 1, 0)
-                               outliers
-                             })
-
-# Method 4: Median Absolute Deviation
-metabolite.mad = apply(scaled.metabolite.df, 2, mad, na.rm=T)
-metabolite.median = apply(scaled.metabolite.df, 2, median, na.rm=T)
-lower.bound.mad = metabolite.median + (-2*metabolite.mad)
-upper.bound.mad = metabolite.median + (2*metabolite.mad)
-metabolite.lower = apply(scaled.metabolite.df, 2, 
+# Method 3: Median Absolute Deviation
+# http://www.r-bloggers.com/absolute-deviation-around-the-median/
+lower.mad.outliers = apply(scaled.metabolite.df, 2, 
                          function(x) {
                            median = median(x, na.rm=T)
                            mad = mad(x, na.rm=T)
                            lower.bound.mad = median + (-2*mad)
-                           x < lower.bound.mad
+                           which(x < lower.bound.mad)
                          })
 
-metabolite.higher = apply(scaled.metabolite.df, 2, 
+higher.mad.outliers = apply(scaled.metabolite.df, 2, 
                          function(x) {
                            median = median(x, na.rm=T)
                            mad = mad(x, na.rm=T)
                            upper.bound.mad = median + (2*mad)
-                           x > upper.bound.mad
+                           which(x > upper.bound.mad)
                          })
 
-lower.mad.outliers = which(metabolite.lower, arr.ind=T)
-higher.mad.outliers = which(metabolite.higher, arr.ind=T)
+mad.outliers = data.frame(lower.mad = I(lower.mad.outliers),
+                          higher.mad = I(higher.mad.outliers))
 
+
+# TODO: Method 4: ARIMA Models
+# http://stackoverflow.com/questions/13327373/univariate-outlier-detectionex
+# http://faculty.chicagobooth.edu/ruey.tsay/teaching/mtsbk/
+# http://www.jalobe.com:8080/doc/tsoutliers.pdf
+# Although we do not have enough points to get reasonable estimates from these models.
+
+
+# Combine the outliers
+outliers = cbind(z.score.outliers, mad.outliers)
+outliers = merge(x=outliers, y=extreme.outliers,
+                 by="row.names", all=T)
+rownames(outliers) = outliers$Row.names
+outliers = outliers[,2:dim(outliers)[2]]
