@@ -7,49 +7,53 @@ library(changepoint)
 # Load data
 source("R/metabolomics/load.R")
 
-# Set paths
-local.path = config$paths$local
-code.path = file.path(local.path, 'code/R/')
+CalculateChangePoints = function(scaled.metabolite.df) {
+  # Change point analysis
+  # http://www.jstatsoft.org/v58/i03/paper
+  
+  # Based on Means
+  not.na.metabolites = scaled.metabolite.df[,which(colSums(is.na(scaled.metabolite.df)) == 0)]
+  m.pelt = cpt.mean(t(not.na.metabolites), method="PELT")
+  names(m.pelt) = colnames(not.na.metabolites)
+  m.binseg = cpt.mean(t(not.na.metabolites), method="BinSeg")
+  names(m.binseg) = colnames(not.na.metabolites)
+  m.changepoints = data.frame(mean.PELT = I(sapply(m.pelt, cpts)),
+                              mean.BinSeg = I(sapply(m.binseg, cpts)))
+  
+  # Based on Variance
+  v.pelt = cpt.var(t(not.na.metabolites), method="PELT")
+  names(v.pelt) = colnames(not.na.metabolites)
+  v.binseg = cpt.var(t(not.na.metabolites), method="BinSeg")
+  names(v.binseg) = colnames(not.na.metabolites)
+  v.changepoints = data.frame(var.PELT = I(sapply(v.pelt, cpts)),
+                              var.BinSeg = I(sapply(v.binseg, cpts)))
+  
+  # Based on MeanVar
+  mv.pelt = cpt.meanvar(t(not.na.metabolites), method="PELT")
+  names(mv.pelt) = colnames(not.na.metabolites)
+  mv.binseg = cpt.meanvar(t(not.na.metabolites), method="BinSeg")
+  names(mv.binseg) = colnames(not.na.metabolites)
+  mv.changepoints = data.frame(meanvar.PELT = I(sapply(mv.pelt, cpts)),
+                               meanvar.BinSeg = I(sapply(mv.binseg, cpts)))
+  
+  changepoints = cbind(m.changepoints, v.changepoints, mv.changepoints)
+  changepoints = list("changepoints"= changepoints,
+                      "m.pelt"= m.pelt, "m.binseg"= m.binseg,
+                      "v.pelt"= v.pelt, "v.binseg"= v.binseg,
+                      "mv.pelt"= mv.pelt, "mv.binseg"= mv.binseg)
+  changepoints
+  
+}
 
-# Extract only Run 6
-samples = GetAllSamples()
-sample.runs.df = CreateSampleRunsDf(samples)
-run.6.sample.runs.df = sample.runs.df[,"6",drop=FALSE]
-run.6.sample.runs.df = run.6.sample.runs.df[which(!is.na(run.6.sample.runs.df)), , drop=F]
-run.6.metabolites = FindOverlappingMetabolites(c(6))
-run.6.sample.dfs = CreateSampleDfs(run.6.sample.runs.df, run.6.metabolites)
-run.6.metabolite.df = CreateMetaboliteDfs(run.6.sample.runs.df, run.6.sample.dfs,run.6.metabolites)
-rownames(run.6.metabolite.df) = run.6.metabolite.df$Xsample.cols
-run.6.metabolite.df = run.6.metabolite.df[,3:dim(run.6.metabolite.df)[2]]
+# Initial analysis only on run 6
+run.6 = LoadData(c(6))
+scaled.metabolite.df = run.6$metabolite.df[,3:dim(run.6$metabolite.df)[2]]
+rownames(scaled.metabolite.df) = run.6$metabolite.df$Xsample.cols
 
 # Scale across samples by log-transforming data and then subtracting out mean
-# scaled.metabolite.df = t(apply(run.6.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
-# colnames(scaled.metabolite.df) = colnames(run.6.metabolite.df)
+#scaled.metabolite.df = t(apply(scaled.metabolite.df, 1, function(x) { scale(log(x), scale=F)}))
 
 # Since these samples are run on the same run, no need to scale the data. A simple log transformation
 # is sufficient.
-scaled.metabolite.df = log(run.6.metabolite.df)
-
-# Change point analysis
-# http://www.jstatsoft.org/v58/i03/paper
-
-# Based on Means
-not.na.metabolites = scaled.metabolite.df[,which(colSums(is.na(scaled.metabolite.df)) == 0)]
-m.pelt = cpt.mean(t(not.na.metabolites), method="PELT")
-m.binseg = cpt.mean(t(not.na.metabolites), method="BinSeg")
-m.changepoints = data.frame(mean.PELT = I(sapply(m.pelt, cpts)),
-                            mean.BinSeg = I(sapply(m.binseg, cpts)))
-
-# Based on Variance
-v.pelt = cpt.var(t(not.na.metabolites), method="PELT")
-v.binseg = cpt.var(t(not.na.metabolites), method="BinSeg")
-v.changepoints = data.frame(var.PELT = I(sapply(v.pelt, cpts)),
-                            var.BinSeg = I(sapply(v.binseg, cpts)))
-
-# Based on MeanVar
-mv.pelt = cpt.meanvar(t(not.na.metabolites), method="PELT")
-mv.binseg = cpt.meanvar(t(not.na.metabolites), method="BinSeg")
-mv.changepoints = data.frame(meanvar.PELT = I(sapply(mv.pelt, cpts)),
-                             meanvar.BinSeg = I(sapply(mv.binseg, cpts)))
-
-changepoints = cbind(m.changepoints, v.changepoints, mv.changepoints)
+scaled.metabolite.df = log(scaled.metabolite.df)
+changepoints = CalculateChangePoints(scaled.metabolite.df)
