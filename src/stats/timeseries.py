@@ -23,7 +23,7 @@ def calculate_zscores(series, sample=None,
         value = series.ix[sample]
         if not include_sample:
             series = series.ix[set(series.index) - set([sample])]
-        return helpers.zscore(value, series.mean(), series.std())
+        return helpers.zscore(value, series.mean(), series.std(ddof=1))
     else:
         return stats.zscore(series)
 
@@ -51,7 +51,7 @@ def outliers(df, z_threshold=2,
 
     outliers = {}
     for day in zscores.index:
-        high_zscores = zscores.ix[day][zscores.ix[day] > z_threshold]
+        high_zscores = zscores.ix[day][zscores.ix[day].map(abs) > z_threshold]
         outliers[day] = high_zscores.index
 
     return outliers
@@ -60,9 +60,10 @@ def regress(df,):
     '''
     Returns linear regression p value for each phenotype column in the df
     '''
-    df.index = df.index.map(lambda x: x - df.index.min())
-    df.index = df.index.days
-    pvalues = df.apply(lambda x: stats.linregress(df.index, x).pvalue)
+    days = df.index.map(lambda x: x - df.index.min())
+    days = days.days
+    #pvalues = df.apply(lambda x: stats.linregress(days, x).pvalue)
+    pvalues = df.apply(lambda x: stats.linregress(days, x)[4]) # 4th entry is pvalue
     return pvalues
 
 def changepoints(df, window_size=5, threshold=1.67):
