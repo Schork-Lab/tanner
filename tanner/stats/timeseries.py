@@ -4,12 +4,11 @@ import helpers
 from change_detector import ZScoreDetector, OnlineSimulator
 
 
-
 def calculate_zscores(series, sample=None,
                       include_sample=False):
     '''
-    Calculate z scores for an entire series 
-    or for a particular value. The sample can 
+    Calculate z scores for an entire series
+    or for a particular value. The sample can
     be part of population or not.
 
     :param series: numpy.array_like values
@@ -17,8 +16,6 @@ def calculate_zscores(series, sample=None,
     :param include_sample: include sample in calculation of mean and std
     :returns: zscores
     '''
-
-
     if sample:
         value = series.ix[sample]
         if not include_sample:
@@ -27,13 +24,11 @@ def calculate_zscores(series, sample=None,
     else:
         return stats.zscore(series)
 
+
 def outliers(df, z_threshold=2,
-                  sample=None,
-                  include_sample=False):
-    '''
-    
-    Returns the classifications for each 
-    sample, for which it is above a z-score threshold.
+             sample=None, include_sample=False):
+    '''Returns the classifications for each sample,
+     for which it is above a z-score threshold.
 
     :param z_threshold: absolute value z threshold
     :param sample: returns zscores for only that sample.
@@ -42,12 +37,11 @@ def outliers(df, z_threshold=2,
     Returns classifications
     '''
 
-    zscores = df.apply(calculate_zscores, 
-                              args=(sample, include_sample))
+    zscores = df.apply(calculate_zscores,
+                       args=(sample, include_sample))
     if sample:
         zscores = pd.DataFrame(zscores).T
         zscores.index = [sample]
-
 
     outliers = {}
     for day in zscores.index:
@@ -56,18 +50,23 @@ def outliers(df, z_threshold=2,
 
     return outliers
 
+
 def regress(df,):
     '''
     Returns linear regression p value for each phenotype column in the df
     '''
     days = df.index.map(lambda x: x - df.index.min())
     days = days.days
-    #pvalues = df.apply(lambda x: stats.linregress(days, x).pvalue)
-    pvalues = df.apply(lambda x: stats.linregress(days, x)[4]) # 4th entry is pvalue
+    # pvalues = df.apply(lambda x: stats.linregress(days, x).pvalue)
+    # 4th entry is pvalue
+    pvalues = df.apply(lambda x: stats.linregress(days, x)[4])
     return pvalues
 
-def changepoints(df, window_size=5, threshold=1.67):
 
+def changepoints(df, window_size=5, threshold=1.67):
+    '''
+    Returns change points for along every classification
+    '''
     def detect(series):
         detector = ZScoreDetector(window_size, threshold)
         simulator = OnlineSimulator(detector, series)
