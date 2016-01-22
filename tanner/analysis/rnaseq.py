@@ -6,7 +6,7 @@ import pandas as pd
 import helpers
 
 
-def load_deseq(directory, individual=None):
+def load_deseq(directory, deseq_type="normalized", individual=None):
     """
     Load DESeq log normalized data for further analysis. The choice
     of log transformed data was made based on reading the following discussions
@@ -21,19 +21,26 @@ def load_deseq(directory, individual=None):
     """
     annotated_count_fn = os.path.join(directory, "annotated_combined.counts")
     count_df = pd.read_table(annotated_count_fn, sep="\t")
-    rlog_fn = os.path.join(directory, "deseq.regularized.log.counts")
-    rlog_df = pd.read_table(rlog_fn, sep="\t")
-    rlog_df['symbol'] = count_df['symbol'].values
-    rlog_df = rlog_df.drop_duplicates(subset='symbol', take_last=True)
-    rlog_df = rlog_df.set_index('symbol')
-    rlog_df = rlog_df.T
-    rlog_samples = rlog_df.index.map(lambda x: x.split('_')[0])
-    rlog_dates = pd.to_datetime(rlog_df.index.map(lambda x: x.split('_')[-1]))
-    rlog_df.index = pd.MultiIndex.from_tuples(zip(rlog_samples, rlog_dates))
-    if individual:
-        return rlog_df.ix[individual, :]
+    if deseq_type == "normalized":
+        deseq_file = os.path.join(directory, "deseq.counts")
+    elif deseq_type == "rlog":
+        deseq_file = os.path.join(directory, "deseq.regularized.log.counts")
+    elif deseq_type == "vstab":
+        deseq_file = os.path.join(directory, "deseq.variance.stablized.counts")
     else:
-        return rlog_df
+        raise ValueError('Unrecognized deseq file type')
+    deseq_df = pd.read_table(deseq_file, sep="\t")
+    deseq_df['symbol'] = count_df['symbol'].values
+    deseq_df = deseq_df.drop_duplicates(subset='symbol', take_last=True)
+    deseq_df = deseq_df.set_index('symbol')
+    deseq_df = deseq_df.T
+    samples = deseq_df.index.map(lambda x: x.split('_')[0])
+    dates = pd.to_datetime(deseq_df.index.map(lambda x: x.split('_')[-1]))
+    deseq_df.index = pd.MultiIndex.from_tuples(zip(samples, dates))
+    if individual:
+        return deseq_df.ix[individual, :]
+    else:
+        return deseq_df
 
 
 def process_timeseries(df, analysis_path, pvalue=0.05):
