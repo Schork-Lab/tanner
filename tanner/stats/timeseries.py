@@ -42,12 +42,15 @@ def outliers(df, z_threshold=2,
     if sample:
         zscores = pd.DataFrame(zscores).T
         zscores.index = [sample]
-
-    outliers = {}
-    for day in zscores.index:
-        high_zscores = zscores.ix[day][zscores.ix[day].map(abs) > z_threshold]
-        outliers[day] = high_zscores.index
-
+    zscores = zscores.fillna(0).applymap(abs)
+    outliers = zscores > z_threshold
+    # Hack, because multindex columns apply in pandas is broken.
+    # outliers = outliers.apply(lambda x: ([y for y in x.index if x[y]]), axis=0)
+    outlier_columns = outliers.columns
+    outliers.columns = range(outliers.shape[1])
+    outliers = outliers.apply(lambda x: ([y for y in x.index if x[y]]), axis=0)
+    outliers.index = outlier_columns
+    outliers = pd.DataFrame(outliers, columns=['outliers'])
     return outliers
 
 
@@ -59,7 +62,8 @@ def regress(df,):
     days = days.days
     # pvalues = df.apply(lambda x: stats.linregress(days, x).pvalue)
     # 4th entry is pvalue
-    pvalues = df.apply(lambda x: stats.linregress(days, x)[4])
+    pvalues = pd.DataFrame(df.apply(lambda x: stats.linregress(days, x)[3]),
+                           columns=['linear-pvalue'])
     return pvalues
 
 
@@ -74,8 +78,8 @@ def changepoints(df, window_size=5, threshold=1.67):
         if change:
             changepoint = simulator.residuals_history.itervalues().next()
             changepoint = len(changepoint) - window_size
-            return changepoint
-        return False
+            return series.index[changepoint]
+        return None
 
-    changepoints = df.apply(detect)
+    changepoints = pd.DataFrame(df.apply(detect), columns=['changepoints'])
     return changepoints
