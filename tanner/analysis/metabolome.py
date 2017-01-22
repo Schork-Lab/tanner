@@ -28,9 +28,9 @@ def parse_metabolite(df, metabolite):
 
 def bayesian_fit(fn, metabolite_col, out_dir, min_run=4):
 
-    df = load_df(fn)
+    df = load_df(fn, drop_missing=False)
     metabolite = df.columns[metabolite_col]
-    metabolite_df = parse_metabolite(df, metabolite)
+    metabolite_df = parse_metabolite(df, metabolite).dropna()
     model = bay.Linear(variational=False)
     model.run(**bay.parse_df(metabolite_df, min_run))
     summary = model.summary()
