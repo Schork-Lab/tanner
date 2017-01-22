@@ -5,6 +5,7 @@ import pandas as pd
 import tanner.stats.bayesian as bay
 import pymc3 as pm
 import os
+import sys
 
 def load_df(fn, drop_missing=True):
     df = pd.read_table(fn, index_col=[0, 1], parse_dates=True)
@@ -38,3 +39,9 @@ def bayesian_fit(fn, metabolite_col, out_dir, min_run=4):
     summary.to_csv(out_fn, sep='\t')
 
     return model.trace
+
+def __main__():
+    if len(sys.argv) < 4:
+        print("Usage: metabolome-fit fn metabolite_col out_dir")
+    else:
+        bayesian_fit(sys.argv[1], sys.argv[2], sys.argv[3])

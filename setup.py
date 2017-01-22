@@ -9,4 +9,4 @@ setup(name='tanner',
       license='MIT',
       packages=find_packages(),
       zip_safe=False,
-      entry_points={'console_scripts': ['metabolome-fit=tanner.analysis.metabolome:bayesian_fit'],})
+      entry_points={'console_scripts': ['metabolome-fit=tanner.analysis.metabolome:__main__'],})
