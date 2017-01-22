@@ -163,7 +163,7 @@ def parse_df(df, min_run):
     """
     df = df[df['run'] > min_run]  
     n_runs = len(df['run'].unique())
-    run_idx = df['run'].values - (min_run+1)
+    run_idx = df['run'].values - (df['run'].min())
 
     time = df['day'].values
     time_values = np.unique(time)
@@ -171,7 +171,7 @@ def parse_df(df, min_run):
     time_idx = [sorted_time[x] for x in time]
 
     levels = df['metabolite'].values
-    return {'run_idx': run_idx, 'time_idx': time_idx, 'time_values':time_values, 'measured_levels': levels}
+    return {'run_idx': run_idx, 'time_idx': time_idx, 'time_values':time_values, 'measured_levels': levels, 'run_values': np.unique(df['run'])}
 
 class Linear(BayesianModel):
     """
@@ -186,7 +186,7 @@ class Linear(BayesianModel):
         self.name = 'Linear'
         super(Linear, self).__init__(*args, **kwargs)
 
-    def create_model(self, run_idx, time_idx, time_values, measured_levels):
+    def create_model(self, run_idx, time_idx, time_values, measured_levels, run_values):
         """
         Simple Bayesian Linear Regression
 

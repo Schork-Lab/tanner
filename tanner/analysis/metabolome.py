@@ -33,10 +33,12 @@ def bayesian_fit(fn, metabolite_col, out_dir, min_run=4):
     metabolite = df.columns[metabolite_col]
     metabolite_df = parse_metabolite(df, metabolite).dropna()
     model = bay.Linear(variational=False)
-    model.run(**bay.parse_df(metabolite_df, min_run))
+    parsed_dict = bay.parse_df(metabolite_df, min_run)
+    model.run(**parsed_dict)
     summary = model.summary()
-    out_fn = os.path.join(out_dir, '{}.bay_summary.tsv'.format(metabolite))
-    summary.to_csv(out_fn, sep='\t')
+    out_fn = os.path.join(out_dir, '{}.info.tsv'.format(metabolite))
+    pd.DataFrame.from_dict(parsed_dict, orient='index').to_csv(out_fn, sep='\t')
+    summary.to_csv(out_fn.replace('info','bay_summary'), sep='\t')
 
     return model.trace
 
