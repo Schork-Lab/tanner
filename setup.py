@@ -8,4 +8,5 @@ setup(name='tanner',
       author_email='kbhutani@ucsd.edu',
       license='MIT',
       packages=find_packages(),
-      zip_safe=False)
+      zip_safe=False,
+      entry_points={'console_scripts': ['metabolome-fit=tanner.analysis.metabolome:bayesian_fit'],})
