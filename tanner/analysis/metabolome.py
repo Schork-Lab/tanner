@@ -47,4 +47,4 @@ def __main__():
         print("Usage: metabolome-fit fn metabolite_col out_dir")
     else:
         print("Running Bayesian fit for {}".format("\t".join(sys.argv[1:])))
-        bayesian_fit(sys.argv[1], sys.argv[2], sys.argv[3])
+        bayesian_fit(sys.argv[1], int(sys.argv[2]), sys.argv[3])
