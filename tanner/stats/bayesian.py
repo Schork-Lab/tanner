@@ -188,14 +188,8 @@ class Linear(BayesianModel):
 
     def create_model(self, run_idx, time_idx, time_values, measured_levels, run_values):
         """
-        Simple Bayesian Linear Regression
+        Bayesian Linear Regression using all the runs
 
-        Args:
-            gwas_gen (pandas.DataFrame): GWAS genotypes
-            gwas_phen (pandas.DataFrame): GWAS phenotypes
-
-        Returns:
-            pymc3.Model(): The Bayesian model
         """
         n_runs = len(np.unique(run_idx))
         n_time = len(np.unique(time_idx))
@@ -214,6 +208,59 @@ class Linear(BayesianModel):
                                    observed=measured_levels)
         return metabolite_model
 
+class SimpleLinearNoScale(BayesianModel):
+    """
+    Linear Model for Metabolite data using a single run without 
+    a scaling factor coupling the mean and variance
+    """
+    def __init__(self, *args, **kwargs):
+        self.name = 'SimpleLinear'
+        super(SimpleLinearNoScale, self).__init__(*args, **kwargs)
+
+    def create_model(self, time_values, measured_levels):
+        """
+        Bayesian Linear Regression using all the runs
+
+        """
+        with pm.Model() as metabolite_model:
+            intercept = pm.Normal('intercept', 0, sd=1e7)
+            alpha = pm.Normal('alpha', mu=0, sd=1e7)
+            #scaling_factor = pm.HalfNormal('beta', sd=1e7)
+            sd_run = pm.HalfCauchy('sd_run', beta=1)
+            mu = intercept + alpha * time_values
+            sd = sd_run
+            #mu = scaling_factor * (intercept + alpha * time_values)
+            #sd = scaling_factor * sd_run
+            metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
+                                   observed=measured_levels)
+        return metabolite_model
+
+class SimpleLinear(BayesianModel):
+    """
+    Linear Model for Metabolite data using a single run with 
+    a scaling factor coupling the mean and variance
+    """
+    def __init__(self, *args, **kwargs):
+        self.name = 'SimpleLinear'
+        super(SimpleLinear, self).__init__(*args, **kwargs)
+
+    def create_model(self, time_values, measured_levels):
+        """
+        Bayesian Linear Regression using all the runs
+
+        """
+        with pm.Model() as metabolite_model:
+            intercept = pm.Normal('intercept', 0, sd=1e7)
+            alpha = pm.Normal('alpha', mu=0, sd=1e7)
+            scaling_factor = pm.HalfNormal('beta', sd=1e7)
+            sd_run = pm.HalfCauchy('sd_run', beta=1)
+            mu = scaling_factor * (intercept + alpha * time_values)
+            sd = scaling_factor * sd_run
+            metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
+                                   observed=measured_levels)
+        return metabolite_model
+
+
 
 class Outlier(BayesianModel):
     """
@@ -228,12 +275,6 @@ class Outlier(BayesianModel):
         """
         Simple Bayesian Linear Regression
 
-        Args:
-            gwas_gen (pandas.DataFrame): GWAS genotypes
-            gwas_phen (pandas.DataFrame): GWAS phenotypes
-
-        Returns:
-            pymc3.Model(): The Bayesian model
         """
         n_runs = len(np.unique(run_idx))
         n_time = len(np.unique(time_idx))
