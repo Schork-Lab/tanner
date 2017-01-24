@@ -149,9 +149,11 @@ class BayesianModel(object):
     def summary(self):
         def trace_sd(x):
              return pd.Series(np.std(x, 0), name='sd')
+        def trace_mean(x):
+            return pd.Series(np.mean(x), name='mean')
         def trace_quantiles(x):
             return pd.DataFrame(pm.quantiles(x, [1, 5, 25, 50, 75, 95, 99]))
-        summary = pm.df_summary(self.trace, stat_funcs=[trace_sd, trace_quantiles])
+        summary = pm.df_summary(self.trace, stat_funcs=[trace_mean, trace_sd, trace_quantiles])
         return summary
 
 
@@ -193,19 +195,27 @@ class Linear(BayesianModel):
         """
         n_runs = len(np.unique(run_idx))
         n_time = len(np.unique(time_idx))
-        print(n_time, n_runs, time_values)
         with pm.Model() as metabolite_model:
             intercept = pm.Normal('intercept', 0, sd=1)
             alpha = pm.Normal('alpha', mu=0, sd=1)
             sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=1)
             tau = T.eye(n_time)*(1/(sd_metabolite**2))
-            latent_level = pm.MvNormal('latent', mu=intercept+alpha*time_values, tau=tau, shape=n_time)
+
+            # Model Selection
+            p = np.array([0.5, 0.5])
+            alternate = pm.Bernoulli('alternate', p[1])
+            mu_null = intercept
+            mu_alternate = intercept + alpha * time_values
+            mu_latent = pm.switch(alternate, mu_alternate, mu_null)
+            latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
             scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
             sd_run = pm.HalfCauchy('sd_run', beta=1, shape=n_runs)
             mu = scaling_factor[run_idx] * latent_level[time_idx]
             sd = scaling_factor[run_idx] * sd_run[run_idx]
             metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
                                    observed=measured_levels)
+            self.steps = [pm.BinaryGibbsMetropolis(vars=[alternate]),
+                          pm.Metropolis()]
         return metabolite_model
 
 class SimpleLinearNoScale(BayesianModel):
