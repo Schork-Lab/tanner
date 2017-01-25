@@ -27,17 +27,18 @@ def parse_metabolite(df, metabolite):
     df = df.sort_values(by=['run', 'day'])
     return df
 
-def bayesian_fit(fn, metabolite_col, out_dir, min_run=4, n_chain=50000):
+def bayesian_fit(fn, metabolite_col, out_dir, min_run=4, n_chain=50000, pooled=False):
 
     df = load_df(fn, drop_missing=False)
     metabolite = df.columns[metabolite_col]
     print('Running Bayesian Full Model for {}'.format(metabolite))
     metabolite_df = parse_metabolite(df, metabolite).dropna()
-    model = bay.Linear(variational=False, n_chain=n_chain)
+    model = bay.Linear(variational=False, n_chain=n_chain, pooled=pooled)
     parsed_dict = bay.parse_df(metabolite_df, min_run)
     model.run(**parsed_dict)
     summary = model.summary()
-    out_fn = os.path.join(out_dir, '{}.info.tsv'.format(metabolite))
+    pooled_phrase = "pooled" if pooled else "not_pooled"
+    out_fn = os.path.join(out_dir, '{}.{}.info.tsv'.format(metabolite, pooled_phrase))
     pd.DataFrame.from_dict(parsed_dict, orient='index').to_csv(out_fn, sep='\t')
     summary.to_csv(out_fn.replace('info','bay_summary'), sep='\t')
     return model.trace
@@ -68,11 +69,16 @@ def simple_fit(fn, metabolite_col, out_dir):
 
 def __main__():
     if len(sys.argv) < 4:
-        print("Usage: metabolome-fit fn metabolite_col out_dir")
+        print("Usage: metabolome-fit not-pooled fn metabolite_col out_dir")
+        print("Usage: metabolite-fit pooled fn metabolite_col out_dir")
         print("Usage: metabolite-fit SIMPLE fn metabolite_col out_dir")
-    elif len(sys.argv) == 4:
-        print("Running Bayesian fit for {}".format("\t".join(sys.argv[1:])))
-        bayesian_fit(sys.argv[1], int(sys.argv[2]), sys.argv[3])
-    elif len(sys.argv) == 5:
-        print("Running Simple Bayesian fit for {}".format("\t".join(sys.argv[1:])))
-        simple_fit(sys.argv[2], int(sys.argv[3]), sys.argv[4])
+    else:
+        if sys.argv[1] == 'not-pooled':
+            print("Running Bayesian Non-pooled for {}".format("\t".join(sys.argv[1:])))
+            bayesian_fit(sys.argv[2], int(sys.argv[3]), sys.argv[4])
+        elif sys.argv[1] == 'pooled':
+            print("Running Bayesian Pooled for {}".format("\t".join(sys.argv[1:])))
+            bayesian_fit(sys.argv[2], int(sys.argv[3]), sys.argv[4], pooled=True)
+        else:    
+            print("Running Simple Bayesian fit for {}".format("\t".join(sys.argv[1:])))
+            simple_fit(sys.argv[2], int(sys.argv[3]), sys.argv[4])

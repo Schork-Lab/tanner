@@ -179,23 +179,27 @@ class Linear(BayesianModel):
     """
     Linear Model for Metabolite data
     """
-    def __init__(self,
+    def __init__(self, pooled=False,
                  *args, **kwargs):
         """
         Args:
 
         """
         self.name = 'Linear'
+        if not pooled:
+            self.create_model = self.create_model_not_pooled
+        else:
+            self.create_model = self.create_model_pooled
         super(Linear, self).__init__(*args, **kwargs)
 
-    def create_model(self, run_idx, time_idx, time_values, measured_levels, run_values):
+    def create_model_not_pooled(self, run_idx, time_idx, time_values, measured_levels, run_values):
         """
-        Bayesian Linear Regression using all the runs
+        Bayesian Linear Regression using all the runs and not pooling
+        the variances.
 
         """
         n_runs = len(np.unique(run_idx))
         n_time = len(np.unique(time_idx))
-        time_values = time_values / 100 # Reparameterize to change per 100 days
         with pm.Model() as metabolite_model:
             intercept = pm.Normal('intercept', 0, sd=100)
             alpha = pm.Normal('alpha', mu=0, sd=100)
@@ -213,6 +217,33 @@ class Linear(BayesianModel):
             latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
             scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
             sd_run = pm.HalfCauchy('sd_run', beta=10, shape=n_runs)
+            mu = scaling_factor[run_idx] * latent_level[time_idx]
+            sd = scaling_factor[run_idx] * sd_run[run_idx]
+            metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
+                                   observed=measured_levels)
+            # self.steps = [pm.BinaryGibbsMetropolis(vars=[alternate]),
+            #               pm.Metropolis()]
+        return metabolite_model
+
+    def create_model_pooled(self, run_idx, time_idx, time_values, measured_levels, run_values):
+        """
+        Bayesian Linear Regression using all the runs and not pooling
+        the variances.
+
+        """
+        n_runs = len(np.unique(run_idx))
+        n_time = len(np.unique(time_idx))
+        with pm.Model() as metabolite_model:
+            intercept = pm.Normal('intercept', 0, sd=100)
+            alpha = pm.Normal('alpha', mu=0, sd=100)
+            sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=10)
+            tau = T.eye(n_time)*(1/(sd_metabolite**2))
+            mu_latent = intercept + alpha * time_values
+            latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
+            scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
+            
+            b_hc_run = pm.Uniform('b_hc_run', 0, 100)
+            sd_run = pm.HalfCauchy('sd_run', beta=b_hc_run, shape=n_runs)
             mu = scaling_factor[run_idx] * latent_level[time_idx]
             sd = scaling_factor[run_idx] * sd_run[run_idx]
             metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
