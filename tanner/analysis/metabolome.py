@@ -27,13 +27,13 @@ def parse_metabolite(df, metabolite):
     df = df.sort_values(by=['run', 'day'])
     return df
 
-def bayesian_fit(fn, metabolite_col, out_dir, min_run=4):
+def bayesian_fit(fn, metabolite_col, out_dir, min_run=4, n_chain=50000):
 
     df = load_df(fn, drop_missing=False)
     metabolite = df.columns[metabolite_col]
     print('Running Bayesian Full Model for {}'.format(metabolite))
     metabolite_df = parse_metabolite(df, metabolite).dropna()
-    model = bay.Linear(variational=False)
+    model = bay.Linear(variational=False, n_chain=n_chain)
     parsed_dict = bay.parse_df(metabolite_df, min_run)
     model.run(**parsed_dict)
     summary = model.summary()

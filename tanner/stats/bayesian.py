@@ -150,7 +150,7 @@ class BayesianModel(object):
         def trace_sd(x):
              return pd.Series(np.std(x, 0), name='sd')
         def trace_mean(x):
-            return pd.Series(np.mean(x), name='mean')
+            return pd.Series(np.mean(x, 0), name='mean')
         def trace_quantiles(x):
             return pd.DataFrame(pm.quantiles(x, [1, 5, 25, 50, 75, 95, 99]))
         summary = pm.df_summary(self.trace, stat_funcs=[trace_mean, trace_sd, trace_quantiles])
@@ -195,27 +195,30 @@ class Linear(BayesianModel):
         """
         n_runs = len(np.unique(run_idx))
         n_time = len(np.unique(time_idx))
+        time_values = time_values / 100 # Reparameterize to change per 100 days
         with pm.Model() as metabolite_model:
-            intercept = pm.Normal('intercept', 0, sd=1)
-            alpha = pm.Normal('alpha', mu=0, sd=1)
-            sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=1)
+            intercept = pm.Normal('intercept', 0, sd=100)
+            alpha = pm.Normal('alpha', mu=0, sd=100)
+            sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=10)
             tau = T.eye(n_time)*(1/(sd_metabolite**2))
 
             # Model Selection
             p = np.array([0.5, 0.5])
-            alternate = pm.Bernoulli('alternate', p[1])
-            mu_null = intercept
-            mu_alternate = intercept + alpha * time_values
-            mu_latent = pm.switch(alternate, mu_alternate, mu_null)
+            #alternate = pm.Bernoulli('alternate', p[1])
+            # mu_null = intercept
+            # mu_alternate = intercept + alpha * time_values
+            # mu_latent = pm.switch(alternate, mu_alternate, mu_null)
+            
+            mu_latent = intercept + alpha * time_values
             latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
             scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
-            sd_run = pm.HalfCauchy('sd_run', beta=1, shape=n_runs)
+            sd_run = pm.HalfCauchy('sd_run', beta=10, shape=n_runs)
             mu = scaling_factor[run_idx] * latent_level[time_idx]
             sd = scaling_factor[run_idx] * sd_run[run_idx]
             metabolite = pm.Normal('metabolite', mu=mu, sd=sd,
                                    observed=measured_levels)
-            self.steps = [pm.BinaryGibbsMetropolis(vars=[alternate]),
-                          pm.Metropolis()]
+            # self.steps = [pm.BinaryGibbsMetropolis(vars=[alternate]),
+            #               pm.Metropolis()]
         return metabolite_model
 
 class SimpleLinearNoScale(BayesianModel):
