@@ -39,7 +39,8 @@ def bayesian_fit(fn, metabolite_col, out_dir, min_run=4, n_chain=50000, pooled=F
     summary = model.summary()
     pooled_phrase = "pooled" if pooled else "not_pooled"
     out_fn = os.path.join(out_dir, '{}.{}.info.tsv'.format(metabolite, pooled_phrase))
-    pd.DataFrame.from_dict(parsed_dict, orient='index').to_csv(out_fn, sep='\t')
+    parsed_df = pd.DataFrame.from_dict(parsed_dict, orient='index')
+    parsed_df.to_csv(out_fn, sep='\t')
     summary.to_csv(out_fn.replace('info','bay_summary'), sep='\t')
     return model.trace
 

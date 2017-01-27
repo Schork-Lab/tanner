@@ -170,7 +170,7 @@ def parse_df(df, min_run):
     time = df['day'].values
     time_values = np.unique(time)
     sorted_time = dict((k, i) for i, k in enumerate(time_values))
-    time_idx = [sorted_time[x] for x in time]
+    time_idx = np.array([sorted_time[x] for x in time])
 
     levels = df['metabolite'].values
     return {'run_idx': run_idx, 'time_idx': time_idx, 'time_values':time_values, 'measured_levels': levels, 'run_values': np.unique(df['run'])}
@@ -202,7 +202,7 @@ class Linear(BayesianModel):
         n_time = len(np.unique(time_idx))
         with pm.Model() as metabolite_model:
             intercept = pm.Normal('intercept', 0, sd=100)
-            alpha = pm.Normal('alpha', mu=0, sd=100)
+            #alpha = pm.Normal('alpha', mu=0, sd=100)
             sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=10)
             tau = T.eye(n_time)*(1/(sd_metabolite**2))
 
@@ -213,7 +213,7 @@ class Linear(BayesianModel):
             # mu_alternate = intercept + alpha * time_values
             # mu_latent = pm.switch(alternate, mu_alternate, mu_null)
             
-            mu_latent = intercept + alpha * time_values
+            mu_latent = intercept #+ alpha * time_values
             latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
             scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
             sd_run = pm.HalfCauchy('sd_run', beta=10, shape=n_runs)
@@ -235,10 +235,10 @@ class Linear(BayesianModel):
         n_time = len(np.unique(time_idx))
         with pm.Model() as metabolite_model:
             intercept = pm.Normal('intercept', 0, sd=100)
-            alpha = pm.Normal('alpha', mu=0, sd=100)
+            #alpha = pm.Normal('alpha', mu=0, sd=100)
             sd_metabolite = pm.HalfCauchy('sd_metabolite', beta=10)
             tau = T.eye(n_time)*(1/(sd_metabolite**2))
-            mu_latent = intercept + alpha * time_values
+            mu_latent = intercept #+ alpha * time_values
             latent_level = pm.MvNormal('latent', mu=mu_latent, tau=tau, shape=n_time)
             scaling_factor = pm.HalfNormal('beta', sd=1e7, shape=n_runs)
             
